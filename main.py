@@ -1,61 +1,23 @@
-import os
-import csv
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 
+CLIENT_ID = "7e75b19185924f00a4be022e1c4f7ccf"
+CLIENT_SECRET = "804162953fd247c29f77bceaa19f4c6f"
+REDIRECT_URI = "http://127.0.0.1:9090/callback"
 
-# ----------------------------
-# 1. Authentication
-# ----------------------------
-# Make sure these environment variables are set:
-# SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET
-# Example (Mac/Linux):
-#export SPOTIPY_CLIENT_ID="7e75b19185924f00a4be022e1c4f7ccf"
-#export SPOTIPY_CLIENT_SECRET="804162953fd247c29f77bceaa19f4c6f"
+scope = "user-read-private"  # reicht, du brauchst keine großen Scopes für Audio Features
 
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials())
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    redirect_uri=REDIRECT_URI,
+    scope=scope,
+    open_browser=True
+))
 
-# ----------------------------
-# 2. Playlist URI
-# ----------------------------
-# Replace with your playlist URI or URL
-PLAYLIST_URI = "https://open.spotify.com/playlist/33OfuMTc0ouqa88abnE1tO"
+# Test: Audio-Features eines Songs
+track_id = "7qiZfU4dY1lWllzX7mPBI3"  # Shape of You
+features = sp.audio_features([track_id])[0]
 
-# ----------------------------
-# 3. Fetch all tracks from playlist
-# ----------------------------
-def get_playlist_tracks(sp, playlist_uri):
-    results = sp.playlist_tracks(playlist_uri)
-    tracks = results["items"]
-    while results["next"]:
-        results = sp.next(results)
-        tracks.extend(results["items"])
-    return tracks
-
-tracks = get_playlist_tracks(sp, PLAYLIST_URI)
-
-# ----------------------------
-# 4. Extract BPM and save to CSV
-# ----------------------------
-with open("playlist_bpm.csv", "w", newline="", encoding="utf-8") as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(["Artist", "Track", "BPM"])  # header row
-
-    for item in tracks:
-        track = item["track"]
-        track_name = track["name"]
-        artist_name = track["artists"][0]["name"]
-
-        try:
-            features = sp.audio_features(track["id"])[0]
-            if features:
-                tempo = features["tempo"]
-            else:
-                tempo = None
-        except spotipy.exceptions.SpotifyException as e:
-            print(f"Skipping {track_name} by {artist_name}: {e}")
-            tempo = None
-
-
-print(f"Saved BPM data for {len(tracks)} tracks to playlist_bpm.csv")
-
+print("Tempo:", features["tempo"])
+print("Alle Features:", features)
